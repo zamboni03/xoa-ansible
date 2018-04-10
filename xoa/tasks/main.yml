@@ -1,0 +1,145 @@
+---
+- name: create xoa group
+  group:
+    name: xoa
+    state: present
+    system: yes
+
+- name: create xoa user
+  user:
+    name: xoa
+    state: present
+    group: xoa
+    system: yes
+
+- name: Add Nodesource apt key.
+  apt_key:
+    url: https://dl.yarnpkg.com/debian/pubkey.gpg
+    state: present
+
+- name: Ensure Yarn apt repository is present
+  apt_repository:
+    repo="{{ item }} https://dl.yarnpkg.com/debian/ stable main"
+    update_cache=yes
+    state=present
+  with_items:
+    - deb
+#    - deb-src
+
+- name: Install xoa dependent packages
+  apt: pkg={{item}} state=present update_cache=yes cache_valid_time=604800
+  with_items:
+    - build-essential
+    - python-minimal
+    - yarn
+    - git
+    - libpng-dev
+    - redis-server
+
+- name: Clone XOA Git
+  git:
+    repo: 'https://github.com/vatesfr/xen-orchestra'
+    dest: /opt/xoa
+#    version: stable
+    update: yes
+  register: gitchanged
+
+- name: XOA Yarn
+  command: /usr/bin/yarn
+  args:
+    chdir: /opt/xoa
+  when: gitchanged.changed == True
+
+- name: XOA Yarn build
+  command: /usr/bin/yarn build
+  args:
+    chdir: /opt/xoa
+  when: gitchanged.changed == True
+
+- name: Yarn Forever
+  command: /usr/bin/yarn global add forever
+  when: gitchanged.before is not defined
+
+- name: Yarn Forever Service
+  command: /usr/bin/yarn global add forever-service
+  when: gitchanged.before is not defined
+
+- name: Install "forever" node.js package globally.
+  npm:
+    name: forever
+    global: yes
+
+- name: Install "forever-service" node.js package globally.
+  npm:
+    name: forever-service
+    global: yes
+
+- name: Add .xo-server.yaml file to /opt/xoa/packages/xo-server
+  template:
+    src: .xo-server.yaml.j2
+    dest: /opt/xoa/packages/xo-server/.xo-server.yaml
+    mode: 0644
+
+- name: set ownership of /opt/xoa to xoa:xoa
+  file:
+    path: /opt/xoa
+    owner: xoa
+    group: xoa
+    recurse: yes
+
+- name: create /var/lib/xo-server
+  file:
+    path: /var/lib/xo-server
+    owner: xoa
+    group: xoa
+    state: directory
+    mode: 0755
+
+- name: set permissions on /var/log/orchestra.log
+  file:
+    path: /var/log/orchestra.log
+    owner: xoa
+    group: xoa
+    state: touch
+    mode: 0755
+
+- name: check if /etc/init.d/orchestra exists
+  stat:
+    path: /etc/init.d/orchestra
+  register: xoainitd
+
+- name: Create forever-service
+  command: /usr/local/bin/
+
+  args:
+    chdir: /opt/xoa/packages/xo-server/bin
+  when: xoainitd.stat.exists == False
+
+- name: Make sure orchestra is started
+  service:
+    name: orchestra
+    state: restarted
+
+# Install
+## git clone -b master http://github.com/vatesfr/xen-orchestra
+## yarn
+## yarn build
+## Copy .xo-server.yaml.j2 to xo-server directory
+## yarn global add forever
+## yarn global add forever-service
+## cd xen-orchestra/packages/xo-server/bin/
+## npm install -g forever
+## npm install -g forever-service
+## forever-service install orchestra -r username -s xo-server
+
+# Update
+## cd xo-server
+## git pull --ff-only
+## yarn
+## yarn build
+## cd xo-web
+## yarn
+## yarn build
+## service orchestra restart
+
+
