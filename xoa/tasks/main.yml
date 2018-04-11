@@ -1,15 +1,15 @@
 ---
-- name: create xoa group
+- name: create xo group
   group:
-    name: xoa
+    name: xo
     state: present
     system: yes
 
-- name: create xoa user
+- name: create xo user
   user:
-    name: xoa
+    name: xo
     state: present
-    group: xoa
+    group: xo
     system: yes
 
 - name: Add Nodesource apt key.
@@ -26,7 +26,7 @@
     - deb
 #    - deb-src
 
-- name: Install xoa dependent packages
+- name: Install xo dependent packages
   apt: pkg={{item}} state=present update_cache=yes cache_valid_time=604800
   with_items:
     - build-essential
@@ -36,24 +36,24 @@
     - libpng-dev
     - redis-server
 
-- name: Clone XOA Git
+- name: Clone xo Git
   git:
     repo: 'https://github.com/vatesfr/xen-orchestra'
-    dest: /opt/xoa
+    dest: /opt/xo
 #    version: stable
     update: yes
   register: gitchanged
 
-- name: XOA Yarn
+- name: xo Yarn
   command: /usr/bin/yarn
   args:
-    chdir: /opt/xoa
+    chdir: /opt/xo
   when: gitchanged.changed == True
 
-- name: XOA Yarn build
+- name: xo Yarn build
   command: /usr/bin/yarn build
   args:
-    chdir: /opt/xoa
+    chdir: /opt/xo
   when: gitchanged.changed == True
 
 - name: Yarn Forever
@@ -74,46 +74,46 @@
     name: forever-service
     global: yes
 
-- name: Add .xo-server.yaml file to /opt/xoa/packages/xo-server
+- name: Add .xo-server.yaml file to /opt/xo/packages/xo-server
   template:
     src: .xo-server.yaml.j2
-    dest: /opt/xoa/packages/xo-server/.xo-server.yaml
+    dest: /opt/xo/packages/xo-server/.xo-server.yaml
     mode: 0644
 
-- name: set ownership of /opt/xoa to xoa:xoa
+- name: set ownership of /opt/xo to xo:xo
   file:
-    path: /opt/xoa
-    owner: xoa
-    group: xoa
+    path: /opt/xo
+    owner: xo
+    group: xo
     recurse: yes
 
 - name: create /var/lib/xo-server
   file:
     path: /var/lib/xo-server
-    owner: xoa
-    group: xoa
+    owner: xo
+    group: xo
     state: directory
     mode: 0755
 
 - name: set permissions on /var/log/orchestra.log
   file:
     path: /var/log/orchestra.log
-    owner: xoa
-    group: xoa
+    owner: xo
+    group: xo
     state: touch
     mode: 0755
 
 - name: check if /etc/init.d/orchestra exists
   stat:
     path: /etc/init.d/orchestra
-  register: xoainitd
+  register: xoinitd
 
 - name: Create forever-service
   command: /usr/local/bin/
 
   args:
-    chdir: /opt/xoa/packages/xo-server/bin
-  when: xoainitd.stat.exists == False
+    chdir: /opt/xo/packages/xo-server/bin
+  when: xoinitd.stat.exists == False
 
 - name: Make sure orchestra is started
   service:
