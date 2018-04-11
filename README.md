@@ -1,5 +1,6 @@
 # xoce-ansible
-Simple ansible playbook for installing and updating XOA
+Simple ansible playbook for installing and updating XO Community Edition
+>>>>>>> Stashed changes
 
 This is an opinionated playbook
 
